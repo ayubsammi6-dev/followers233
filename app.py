@@ -5,9 +5,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FH_SECRET", "change-me")
-URL = os.environ.get("SUPABASE_URL", "").rstrip("/") + "/rest/v1"
+URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/") + "/rest/v1"
 KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
-H = {"apikey": KEY, "Authorization": "Bearer " + KEY, "Content-Type": "application/json"}
+KEY = KEY.strip()
+H = {"apikey": KEY, "Content-Type": "application/json"}
+if KEY.startswith("eyJ"):  # old-style JWT service_role key
+    H["Authorization"] = "Bearer " + KEY
 
 SERVICES = [
     ("niche", "Niche Boost: 10M Views + 1M Followers", "Instagram / Twitter / Facebook", 50),
@@ -42,7 +45,7 @@ def signup():
             if r.status_code == 409: flash("Ei username already ache.")
             elif r.ok:
                 session["uid"] = r.json()[0]["id"]; return redirect("/dashboard")
-            else: flash("Error hoyeche, abar try korun.")
+            else: flash(f"Error {r.status_code}: {r.text[:200]}")
     return render_template("auth.html", title="Sign Up", user=None)
 
 @app.route("/login", methods=["GET", "POST"])
